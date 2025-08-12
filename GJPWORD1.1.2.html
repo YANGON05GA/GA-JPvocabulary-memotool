@@ -1,0 +1,1009 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>G单词去A</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet"/>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <style type="text/tailwindcss">
+    @layer utilities {
+      .content-auto {
+        content-visibility: auto;
+      }
+      .card-shadow {
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+      }
+      .transition-all-300 {
+        transition: all 300ms ease-in-out;
+      }
+      .btn-hover {
+        @apply transform hover:scale-105 transition-all duration-300;
+      }
+    }
+  </style>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            primary: '#4F46E5',
+            secondary: '#10B981',
+            danger: '#EF4444',
+            neutral: '#6B7280',
+            light: '#F3F4F6',
+          },
+          fontFamily: {
+            sans: ['Inter', 'system-ui', 'sans-serif'],
+          },
+        }
+      }
+    }
+  </script>
+</head>
+
+<body class="bg-gray-50 min-h-screen font-sans">
+  <header class="bg-primary text-white shadow-lg">
+    <div class="container mx-auto px-4 py-6">
+      <h1 class="text-[clamp(1.5rem,3vw,2.5rem)] font-bold flex items-center">
+        <i class="fa fa-language mr-3"></i><span id="app-title">G单词去A</span>
+      </h1>
+      <p class="text-blue-100 mt-2" id="app-subtitle">高效记忆单词的工具</p>
+    </div>
+  </header>
+
+  <!-- 主页区域 -->
+  <section id="home-section" class="max-w-3xl mx-auto py-12">
+    <div class="bg-white rounded-xl p-8 card-shadow text-center">
+      <h2 class="text-3xl font-bold text-gray-800 mb-8">请选择学习模式</h2>
+      
+      <div class="grid md:grid-cols-2 gap-8 mb-8">
+        <div class="bg-gray-50 rounded-xl p-6 card-shadow btn-hover cursor-pointer" id="custom-file-option">
+          <div class="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
+            <i class="fa fa-upload text-2xl text-primary"></i>
+          </div>
+          <h3 class="text-xl font-semibold text-gray-800 mb-2">导入自定义单词</h3>
+          <p class="text-gray-600">上传您自己的单词文件进行学习和测试</p>
+        </div>
+        
+        <div class="bg-gray-50 rounded-xl p-6 card-shadow btn-hover cursor-pointer" id="system-library-option">
+          <div class="w-16 h-16 bg-secondary/10 rounded-full flex items-center justify-center mx-auto mb-4">
+            <i class="fa fa-book text-2xl text-secondary"></i>
+          </div>
+          <h3 class="text-xl font-semibold text-gray-800 mb-2">使用系统单词库</h3>
+          <p class="text-gray-600">选择教材、级别和课程进行学习</p>
+        </div>
+      </div>
+      
+      <div class="text-gray-500 text-sm">
+        <p>支持多种学习模式，帮助您高效记忆和掌握单词</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 系统单词库选择区域 -->
+  <section id="system-library-section" class="max-w-3xl mx-auto py-8 hidden">
+    <div class="bg-white rounded-xl p-8 card-shadow">
+      <div class="flex items-center mb-6">
+        <button id="back-to-home-from-system" class="text-gray-600 hover:text-primary mr-4">
+          <i class="fa fa-arrow-left"></i>
+        </button>
+        <h2 class="text-2xl font-bold text-gray-800">选择学习内容</h2>
+      </div>
+      
+      <div class="mb-6">
+        <label class="block text-gray-700 mb-2">教材</label>
+        <select id="textbook-select" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent">
+          <option value="new-standard-japanese" selected>新标准日本语</option>
+          <!-- 未来可以添加其他教材 -->
+        </select>
+      </div>
+      
+      <div class="mb-6">
+        <label class="block text-gray-700 mb-2">级别</label>
+        <select id="level-select" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent">
+          <option value="primary">初级</option>
+          <option value="intermediate">中级</option>
+          <option value="advanced">高级</option>
+        </select>
+      </div>
+      
+      <div class="mb-8">
+        <label class="block text-gray-700 mb-2">课程 (1-48)</label>
+        <div class="flex items-center">
+          <input type="number" id="lesson-number" min="1" max="48" value="1"
+                 class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent">
+        </div>
+      </div>
+      
+      <button id="load-system-words-btn"
+              class="w-full bg-secondary hover:bg-secondary/90 text-white font-bold py-3 px-6 rounded-lg transition-all-300">
+        加载单词表并开始测验
+      </button>
+    </div>
+  </section>
+
+  <!-- 自定义文件上传区域 -->
+  <section id="upload-section" class="max-w-3xl mx-auto py-8 hidden">
+    <div class="bg-white rounded-xl p-8 card-shadow">
+      <div class="flex items-center mb-6">
+        <button id="back-to-home-from-upload" class="text-gray-600 hover:text-primary mr-4">
+          <i class="fa fa-arrow-left"></i>
+        </button>
+        <h2 class="text-2xl font-bold text-gray-800">上传单词文件</h2>
+      </div>
+      
+      <div class="mb-6">
+        <label for="quiz-name" class="block text-gray-700 mb-2">测验名称（可选）</label>
+        <input type="text" id="quiz-name" 
+               class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+               placeholder="请输入本次测验的名称...">
+      </div>
+      
+      <div class="mb-6">
+        <p class="text-gray-600 mb-4">请上传包含以下信息的文件（XLSX、CSV 或文本文件）：</p>
+        <ul class="list-disc list-inside text-gray-600 space-y-2 mb-6">
+          <li>第一行/列：中文</li>
+          <li>第二行/列：假名</li>
+          <li>第三行/列：日语单词（含汉字）</li>
+          <li>第四行/列：词性</li>
+        </ul>
+        <div class="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-primary transition-all-300 cursor-pointer"
+             id="drop-area">
+          <i class="fa fa-cloud-upload text-5xl text-gray-400 mb-4"></i>
+          <p class="text-gray-600 mb-2">拖放文件到此处，或点击选择文件</p>
+          <p class="text-gray-400 text-sm">支持 XLSX、CSV、TXT 格式</p>
+          <input type="file" id="file-input" class="hidden" accept=".xlsx,.csv,.txt">
+        </div>
+      </div>
+      <div class="flex flex-col sm:flex-row gap-4 mt-8">
+        <div class="flex-1">
+          <label class="block text-gray-700 mb-2">数据格式</label>
+          <div class="flex gap-4 flex-wrap">
+            <label class="inline-flex items-center">
+              <input type="radio" name="data-format" value="rows" checked class="form-radio text-primary">
+              <span class="ml-2">行模式</span>
+            </label>
+            <label class="inline-flex items-center">
+              <input type="radio" name="data-format" value="columns" class="form-radio text-primary">
+              <span class="ml-2">列模式</span>
+            </label>
+          </div>
+        </div>
+      </div>
+      <button id="start-quiz-btn"
+              class="mt-8 bg-primary hover:bg-primary/90 text-white font-bold py-3 px-6 rounded-lg transition-all-300 disabled:opacity-50 disabled:cursor-not-allowed"
+              disabled>
+        开始测验
+      </button>
+    </div>
+  </section>
+
+  <!-- 测验区域 -->
+  <section id="quiz-section" class="max-w-3xl mx-auto hidden">
+    <div class="min-h-[600px] bg-black text-white rounded-xl p-8 card-shadow flex flex-col justify-center">
+      <div class="progress-bar w-full h-2 bg-gray-700 rounded-full mb-8 overflow-hidden">
+        <div class="progress bg-primary h-full" id="progress"></div>
+      </div>
+      
+      <div class="text-center mb-8">
+        <h2 class="text-2xl font-bold mb-2" id="quiz-title-display">单词测验</h2>
+        <div class="text-gray-300">
+          <span id="current-question">1</span>/<span id="total-questions">0</span>
+        </div>
+      </div>
+      
+      <div class="mb-8 p-6 bg-gray-900 rounded-lg">
+        <div class="mb-6">
+          <p class="text-gray-400 text-sm mb-1">中文</p>
+          <p id="chinese-word" class="text-2xl font-medium text-white"></p>
+        </div>
+        <div>
+          <p class="text-gray-400 text-sm mb-1">词性</p>
+          <p id="part-of-speech" class="text-xl text-gray-300"></p>
+        </div>
+      </div>
+      
+      <div class="mb-8">
+        <label for="japanese-input" class="block text-gray-300 mb-3">请输入日语翻译（假名或汉字均可）</label>
+        <div class="flex">
+          <input type="text" id="japanese-input"
+                 class="flex-1 px-4 py-3 bg-gray-800 border border-gray-700 text-white rounded-l-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                 placeholder="输入日语...">
+          <button id="submit-answer"
+                  class="bg-primary hover:bg-primary/90 text-white font-medium px-6 py-3 rounded-r-lg transition-all-300">
+            提交
+          </button>
+        </div>
+      </div>
+      
+      <div id="feedback" class="mb-8 hidden">
+        <div id="correct-feedback" class="bg-green-900/30 border border-green-800/50 p-4 rounded-lg hidden">
+          <div class="flex">
+            <div class="flex-shrink-0">
+              <i class="fa fa-check-circle text-green-400 text-xl"></i>
+            </div>
+            <div class="ml-3">
+              <p class="text-green-300 font-medium">正确！</p>
+              <p class="text-gray-300 mt-1">
+                <span class="font-medium">日语：</span><span id="correct-japanese"></span><br>
+                <span class="font-medium">假名：</span><span id="correct-kana"></span><br>
+                <a href="#" id="youdao-link" target="_blank"
+                   class="text-blue-400 hover:underline mt-2 inline-block">查看有道词典释义</a>
+              </p>
+            </div>
+          </div>
+        </div>
+        
+        <div id="incorrect-feedback" class="bg-red-900/30 border border-red-800/50 p-4 rounded-lg hidden">
+          <div class="flex">
+            <div class="flex-shrink-0">
+              <i class="fa fa-times-circle text-red-400 text-xl"></i>
+            </div>
+            <div class="ml-3">
+              <p class="text-red-300 font-medium">不正确</p>
+              <p class="text-gray-300 mt-1">
+                <span class="font-medium">你的答案：</span><span id="user-answer"></span><br>
+                <span class="font-medium">正确答案：</span><span id="actual-japanese"></span><br>
+                <span class="font-medium">假名：</span><span id="actual-kana"></span><br>
+                <a href="#" id="youdao-link-incorrect" target="_blank"
+                   class="text-blue-400 hover:underline mt-2 inline-block">查看有道词典释义</a>
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <div class="flex justify-between mt-8">
+        <button id="play-audio"
+                class="bg-gray-800 hover:bg-gray-700 text-gray-300 font-medium py-2 px-4 rounded-lg transition-all-300 flex items-center">
+          <i class="fa fa-volume-up mr-2"></i> 播放读音
+        </button>
+        <div class="flex gap-3">
+          <button id="quit-quiz"
+                  class="bg-gray-700 hover:bg-gray-600 text-white font-medium py-2 px-4 rounded-lg transition-all-300">
+            <i class="fa fa-sign-out mr-1"></i> 结束测验
+          </button>
+          <button id="next-question"
+                  class="bg-primary hover:bg-primary/90 text-white font-medium py-2 px-6 rounded-lg transition-all-300 hidden">
+            下一题 <i class="fa fa-arrow-right ml-1"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 结果区域 -->
+  <section id="results-section" class="max-w-3xl mx-auto hidden py-8">
+    <div class="bg-white rounded-xl p-8 card-shadow">
+      <div class="flex items-center mb-6">
+        <button id="back-to-home-from-results" class="text-gray-600 hover:text-primary mr-4">
+          <i class="fa fa-arrow-left"></i>
+        </button>
+        <h2 class="text-2xl font-bold text-gray-800 mb-6" id="results-title">测验结果</h2>
+      </div>
+      
+      <div class="grid grid-cols-2 gap-6 mb-8 text-center">
+        <div class="bg-gray-50 p-6 rounded-lg">
+          <p class="text-gray-500 mb-1">总题数</p>
+          <p id="total-count" class="text-3xl font-bold text-gray-800">0</p>
+        </div>
+        <div class="bg-gray-50 p-6 rounded-lg">
+          <p class="text-gray-500 mb-1">正确率</p>
+          <p id="accuracy-rate" class="text-3xl font-bold text-primary">0%</p>
+        </div>
+      </div>
+      <div class="mb-8">
+        <div class="flex justify-between items-center mb-4">
+          <h3 class="text-xl font-semibold text-gray-800">错题列表</h3>
+          <label class="inline-flex items-center">
+            <input type="checkbox" id="select-all-wrong" class="form-checkbox text-primary">
+            <span class="ml-2 text-gray-700">全选</span>
+          </label>
+        </div>
+        <div id="wrong-answers-list" class="max-h-60 overflow-y-auto">
+          <!-- 错题会动态添加到这里 -->
+        </div>
+      </div>
+      <div class="flex flex-col sm:flex-row gap-4">
+        <button id="download-wrong-answers"
+                class="flex-1 bg-primary hover:bg-primary/90 text-white font-medium py-3 px-6 rounded-lg transition-all-300 flex items-center justify-center">
+          <i class="fa fa-download mr-2"></i> 下载选中的错题
+        </button>
+        <button id="restart-quiz"
+                class="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium py-3 px-6 rounded-lg transition-all-300">
+          重新开始
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <footer class="bg-gray-800 text-white mt-12 py-6">
+    <div class="container mx-auto px-4 text-center">
+      <p>G单词去A &copy; 2023</p>
+    </div>
+  </footer>
+
+  <script>
+    // 全局变量
+    let vocabularyList = [];
+    let shuffledVocabulary = [];
+    let currentQuestionIndex = 0;
+    let wrongAnswers = [];
+    let audioContext = null;
+    let isAnswerSubmitted = false;
+    let currentQuizName = '';
+    let currentTextbook = '';
+    let currentLevel = '';
+    let currentLesson = '';
+
+    // DOM 元素
+    const homeSection = document.getElementById('home-section');
+    const systemLibrarySection = document.getElementById('system-library-section');
+    const uploadSection = document.getElementById('upload-section');
+    const quizSection = document.getElementById('quiz-section');
+    const resultsSection = document.getElementById('results-section');
+    
+    const customFileOption = document.getElementById('custom-file-option');
+    const systemLibraryOption = document.getElementById('system-library-option');
+    const backToHomeFromSystem = document.getElementById('back-to-home-from-system');
+    const backToHomeFromUpload = document.getElementById('back-to-home-from-upload');
+    const backToHomeFromResults = document.getElementById('back-to-home-from-results');
+    
+    const textbookSelect = document.getElementById('textbook-select');
+    const levelSelect = document.getElementById('level-select');
+    const lessonNumber = document.getElementById('lesson-number');
+    const loadSystemWordsBtn = document.getElementById('load-system-words-btn');
+    
+    const dropArea = document.getElementById('drop-area');
+    const fileInput = document.getElementById('file-input');
+    const startQuizBtn = document.getElementById('start-quiz-btn');
+    const chineseWordEl = document.getElementById('chinese-word');
+    const partOfSpeechEl = document.getElementById('part-of-speech');
+    const japaneseInput = document.getElementById('japanese-input');
+    const submitAnswerBtn = document.getElementById('submit-answer');
+    const feedbackEl = document.getElementById('feedback');
+    const correctFeedbackEl = document.getElementById('correct-feedback');
+    const incorrectFeedbackEl = document.getElementById('incorrect-feedback');
+    const correctJapaneseEl = document.getElementById('correct-japanese');
+    const correctKanaEl = document.getElementById('correct-kana');
+    const userAnswerEl = document.getElementById('user-answer');
+    const actualJapaneseEl = document.getElementById('actual-japanese');
+    const actualKanaEl = document.getElementById('actual-kana');
+    const nextQuestionBtn = document.getElementById('next-question');
+    const currentQuestionEl = document.getElementById('current-question');
+    const totalQuestionsEl = document.getElementById('total-questions');
+    const playAudioBtn = document.getElementById('play-audio');
+    const totalCountEl = document.getElementById('total-count');
+    const accuracyRateEl = document.getElementById('accuracy-rate');
+    const wrongAnswersListEl = document.getElementById('wrong-answers-list');
+    const downloadWrongAnswersBtn = document.getElementById('download-wrong-answers');
+    const restartQuizBtn = document.getElementById('restart-quiz');
+    const selectAllWrongCheckbox = document.getElementById('select-all-wrong');
+    const youdaoLinkEl = document.getElementById('youdao-link');
+    const youdaoLinkIncorrectEl = document.getElementById('youdao-link-incorrect');
+    const progressEl = document.getElementById('progress');
+    const quitQuizBtn = document.getElementById('quit-quiz');
+    const quizNameInput = document.getElementById('quiz-name');
+    const appTitleEl = document.getElementById('app-title');
+    const quizTitleDisplayEl = document.getElementById('quiz-title-display');
+    const resultsTitleEl = document.getElementById('results-title');
+
+    // 初始化事件监听
+    function initEventListeners() {
+      // 主页相关事件
+      customFileOption.addEventListener('click', () => {
+        homeSection.classList.add('hidden');
+        uploadSection.classList.remove('hidden');
+      });
+      
+      systemLibraryOption.addEventListener('click', () => {
+        homeSection.classList.add('hidden');
+        systemLibrarySection.classList.remove('hidden');
+      });
+      
+      // 返回主页事件
+      backToHomeFromSystem.addEventListener('click', () => {
+        systemLibrarySection.classList.add('hidden');
+        homeSection.classList.remove('hidden');
+      });
+      
+      backToHomeFromUpload.addEventListener('click', () => {
+        uploadSection.classList.add('hidden');
+        homeSection.classList.remove('hidden');
+      });
+      
+      backToHomeFromResults.addEventListener('click', () => {
+        resultsSection.classList.add('hidden');
+        homeSection.classList.remove('hidden');
+        appTitleEl.textContent = "G单词去A";
+      });
+      
+      // 系统单词库相关事件
+      loadSystemWordsBtn.addEventListener('click', loadSystemWords);
+      
+      // 文件上传区域事件
+      dropArea.addEventListener('click', () => {
+        fileInput.click();
+      });
+      
+      dropArea.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        dropArea.classList.add('border-primary', 'bg-blue-50');
+      });
+      
+      dropArea.addEventListener('dragleave', () => {
+        dropArea.classList.remove('border-primary', 'bg-blue-50');
+      });
+      
+      dropArea.addEventListener('drop', (e) => {
+        e.preventDefault();
+        dropArea.classList.remove('border-primary', 'bg-blue-50');
+        if (e.dataTransfer.files && e.dataTransfer.files.length) {
+          handleFile(e.dataTransfer.files[0]);
+        }
+      });
+      
+      fileInput.addEventListener('change', () => {
+        if (fileInput.files && fileInput.files.length) {
+          handleFile(fileInput.files[0]);
+        }
+      });
+      
+      // 按钮事件
+      startQuizBtn.addEventListener('click', startQuiz);
+      submitAnswerBtn.addEventListener('click', checkAnswer);
+      nextQuestionBtn.addEventListener('click', nextQuestion);
+      playAudioBtn.addEventListener('click', playPronunciation);
+      downloadWrongAnswersBtn.addEventListener('click', downloadWrongAnswers);
+      restartQuizBtn.addEventListener('click', restartQuiz);
+      selectAllWrongCheckbox.addEventListener('change', toggleSelectAll);
+      quitQuizBtn.addEventListener('click', quitQuiz);
+      
+      // 回车交互
+      japaneseInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          if (!isAnswerSubmitted) {
+            checkAnswer();
+            isAnswerSubmitted = true;
+          } else {
+            nextQuestion();
+            isAnswerSubmitted = false;
+          }
+        }
+      });
+    }
+
+    // 加载系统单词库
+    function loadSystemWords() {
+      currentTextbook = textbookSelect.value;
+      currentLevel = levelSelect.value;
+      currentLesson = lessonNumber.value;
+      
+      // 根据选择构建文件路径
+      // 教材文件夹名映射
+      const textbookFolderMap = {
+        "new-standard-japanese": "新标准日本语"
+      };
+      
+      // 级别文件夹名映射
+      const levelFolderMap = {
+        "primary": "初级",
+        "intermediate": "中级",
+        "advanced": "高级"
+      };
+      
+      const textbookFolder = textbookFolderMap[currentTextbook];
+      const levelFolder = levelFolderMap[currentLevel];
+      const fileName = `lesson${currentLesson}.csv`;
+      
+      // 构建完整路径
+      const filePath = `${textbookFolder}/${levelFolder}/${fileName}`;
+      
+      // 记录当前测验名称
+      currentQuizName = `${textbookFolder}${levelFolder}第${currentLesson}课`;
+      
+      // 尝试加载文件
+      fetch(filePath)
+        .then(response => {
+          if (!response.ok) {
+            throw new Error('文件未找到');
+          }
+          return response.text();
+        })
+        .then(text => {
+          // 解析CSV内容
+          const lines = text.split(/\r\n|\n/).filter(line => line.trim() !== '');
+          const jsonData = lines.map(line => {
+            // 处理带引号的CSV字段
+            const regex = /(".*?"|[^",\s]+)(?=\s*,|\s*$)/g;
+            return line.match(regex)?.map(field => 
+              field.replace(/^"/, '').replace(/"$/, '').trim()
+            ) || [];
+          });
+          
+          // 处理数据并开始测验
+          processData(jsonData);
+          
+          // 直接开始测验（使用行模式）
+          document.querySelector('input[name="data-format"][value="rows"]').checked = true;
+          startQuiz();
+        })
+        .catch(error => {
+          console.error('加载系统单词库失败:', error);
+          alert('系统尚未导入该课程的单词表，请选择其他课程或稍后再试。');
+        });
+    }
+
+    // 处理上传的文件
+    function handleFile(file) {
+      const fileName = file.name;
+      const fileExtension = fileName.split('.').pop().toLowerCase();
+      
+      // 检查文件类型
+      if (!['xlsx', 'csv', 'txt'].includes(fileExtension)) {
+        alert('请上传 XLSX、CSV 或 TXT 格式的文件');
+        return;
+      }
+      
+      const reader = new FileReader();
+      
+      if (fileExtension === 'xlsx') {
+        reader.onload = function(e) {
+          try {
+            const data = new Uint8Array(e.target.result);
+            const workbook = XLSX.read(data, { type: 'array' });
+            const firstSheetName = workbook.SheetNames[0];
+            const worksheet = workbook.Sheets[firstSheetName];
+            const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+            processData(jsonData);
+          } catch (error) {
+            console.error('解析 XLSX 文件出错:', error);
+            alert('解析文件时出错，请检查文件格式是否正确');
+          }
+        };
+        reader.readAsArrayBuffer(file);
+      } else if (fileExtension === 'csv') {
+        reader.onload = function(e) {
+          try {
+            const text = e.target.result;
+            const lines = text.split(/\r\n|\n/).filter(line => line.trim() !== '');
+            const jsonData = lines.map(line => {
+              // 处理带引号的CSV字段
+              const regex = /(".*?"|[^",\s]+)(?=\s*,|\s*$)/g;
+              return line.match(regex)?.map(field => 
+                field.replace(/^"/, '').replace(/"$/, '').trim()
+              ) || [];
+            });
+            processData(jsonData);
+          } catch (error) {
+            console.error('解析 CSV 文件出错:', error);
+            alert('解析文件时出错，请检查文件格式是否正确');
+          }
+        };
+        reader.readAsText(file);
+      } else if (fileExtension === 'txt') {
+        reader.onload = function(e) {
+          try {
+            const text = e.target.result;
+            // 支持逗号、制表符或空格分隔
+            const lines = text.split(/\r\n|\n/).filter(line => line.trim() !== '');
+            const jsonData = lines.map(line => 
+              line.split(/[,|\t|\s]{1,}/).map(item => item.trim())
+            );
+            processData(jsonData);
+          } catch (error) {
+            console.error('解析 TXT 文件出错:', error);
+            alert('解析文件时出错，请检查文件格式是否正确');
+          }
+        };
+        reader.readAsText(file);
+      }
+    }
+
+    // 处理解析后的数据
+    function processData(data) {
+      vocabularyList = [];
+      const dataFormat = document.querySelector('input[name="data-format"]:checked').value;
+      
+      try {
+        if (dataFormat === 'rows') {
+          // 行模式：每行包含中文、假名、日语、词性
+          for (let i = 0; i < data.length; i++) {
+            const row = data[i];
+            if (row.length >= 4) {
+              vocabularyList.push({
+                chinese: row[0].trim(),
+                kana: row[1].trim(),
+                japanese: row[2].trim(),
+                partOfSpeech: row[3].trim()
+              });
+            }
+          }
+        } else {
+          // 列模式：每列包含中文、假名、日语、词性
+          if (data.length < 4) {
+            throw new Error('列模式需要至少4行数据');
+          }
+          
+          const maxLength = Math.max(
+            data[0].length, 
+            data[1].length, 
+            data[2].length, 
+            data[3].length
+          );
+          
+          for (let i = 0; i < maxLength; i++) {
+            vocabularyList.push({
+              chinese: (data[0][i] || '').trim(),
+              kana: (data[1][i] || '').trim(),
+              japanese: (data[2][i] || '').trim(),
+              partOfSpeech: (data[3][i] || '').trim()
+            });
+          }
+        }
+        
+        // 过滤空数据
+        vocabularyList = vocabularyList.filter(item => 
+          item.chinese && (item.kana || item.japanese)
+        );
+        
+        if (vocabularyList.length === 0) {
+          alert('未找到有效的单词数据，请检查文件格式是否正确');
+          startQuizBtn.disabled = true;
+        } else {
+          if (uploadSection.classList.contains('hidden')) {
+            // 系统单词库模式，不显示提示
+          } else {
+            alert(`成功导入 ${vocabularyList.length} 个单词`);
+          }
+          startQuizBtn.disabled = false;
+        }
+      } catch (error) {
+        console.error('处理数据时出错:', error);
+        alert(`处理数据时出错: ${error.message}`);
+        startQuizBtn.disabled = true;
+      }
+    }
+
+    // 开始测验
+    function startQuiz() {
+      // 如果是从上传区域开始，获取用户输入的测验名称
+      if (!uploadSection.classList.contains('hidden')) {
+        currentQuizName = quizNameInput.value.trim() || '自定义单词测验';
+      }
+      
+      // 更新标题显示
+      appTitleEl.textContent = currentQuizName;
+      quizTitleDisplayEl.textContent = currentQuizName;
+      resultsTitleEl.textContent = `${currentQuizName} - 测验结果`;
+      
+      // 打乱单词顺序
+      shuffledVocabulary = [...vocabularyList];
+      shuffleArray(shuffledVocabulary);
+      
+      currentQuestionIndex = 0;
+      wrongAnswers = [];
+      isAnswerSubmitted = false;
+      
+      // 更新UI
+      uploadSection.classList.add('hidden');
+      systemLibrarySection.classList.add('hidden');
+      quizSection.classList.remove('hidden');
+      resultsSection.classList.add('hidden');
+      
+      // 显示第一题
+      showQuestion(currentQuestionIndex);
+    }
+
+    // 显示当前问题
+    function showQuestion(index) {
+      if (index >= shuffledVocabulary.length) {
+        showResults();
+        return;
+      }
+      
+      const vocab = shuffledVocabulary[index];
+      chineseWordEl.textContent = vocab.chinese;
+      partOfSpeechEl.textContent = vocab.partOfSpeech || '未知';
+      
+      // 处理包含~的答案
+      japaneseInput.value = vocab.japanese.includes('~') ? vocab.japanese : '';
+      
+      feedbackEl.classList.add('hidden');
+      correctFeedbackEl.classList.add('hidden');
+      incorrectFeedbackEl.classList.add('hidden');
+      nextQuestionBtn.classList.add('hidden');
+      submitAnswerBtn.disabled = false;
+      
+      // 更新进度
+      currentQuestionEl.textContent = index + 1;
+      totalQuestionsEl.textContent = shuffledVocabulary.length;
+      
+      // 更新进度条
+      const progress = ((index + 1) / shuffledVocabulary.length) * 100;
+      progressEl.style.width = `${progress}%`;
+      
+      // 聚焦输入框
+      japaneseInput.focus();
+    }
+
+    // 检查答案 - 允许空答案
+    function checkAnswer() {
+      const userAnswer = japaneseInput.value.trim();
+      
+      const currentVocab = shuffledVocabulary[currentQuestionIndex];
+      submitAnswerBtn.disabled = true;
+      
+      // 判断答案是否正确
+      const isCorrect = userAnswer.toLowerCase() === currentVocab.kana.toLowerCase() || 
+                       userAnswer.toLowerCase() === currentVocab.japanese.toLowerCase();
+      
+      // 构建有道词典链接
+      const youdaoUrl = `https://www.youdao.com/w/ja/${encodeURIComponent(currentVocab.japanese)}`;
+      youdaoLinkEl.href = youdaoUrl;
+      youdaoLinkIncorrectEl.href = youdaoUrl;
+      
+      // 显示反馈
+      feedbackEl.classList.remove('hidden');
+      correctJapaneseEl.textContent = currentVocab.japanese;
+      correctKanaEl.textContent = currentVocab.kana;
+      actualJapaneseEl.textContent = currentVocab.japanese;
+      actualKanaEl.textContent = currentVocab.kana;
+      userAnswerEl.textContent = userAnswer || '[未作答]';
+      
+      if (isCorrect) {
+        correctFeedbackEl.classList.remove('hidden');
+        playSound('correct');
+      } else {
+        incorrectFeedbackEl.classList.remove('hidden');
+        playSound('wrong');
+        // 记录错题
+        wrongAnswers.push({
+          ...currentVocab,
+          userAnswer: userAnswer || '[未作答]',
+          id: Date.now() + Math.floor(Math.random() * 1000)
+        });
+      }
+      
+      // 显示下一题按钮
+      nextQuestionBtn.classList.remove('hidden');
+    }
+
+    // 下一题
+    function nextQuestion() {
+      currentQuestionIndex++;
+      showQuestion(currentQuestionIndex);
+      isAnswerSubmitted = false;
+    }
+
+    // 显示结果
+    function showResults() {
+      quizSection.classList.add('hidden');
+      resultsSection.classList.remove('hidden');
+      
+      // 更新统计信息
+      const total = shuffledVocabulary.length;
+      const correct = total - wrongAnswers.length;
+      const accuracy = total > 0 ? Math.round((correct / total) * 100) : 0;
+      
+      totalCountEl.textContent = total;
+      accuracyRateEl.textContent = `${accuracy}%`;
+      
+      // 显示错题列表
+      wrongAnswersListEl.innerHTML = '';
+      if (wrongAnswers.length === 0) {
+        wrongAnswersListEl.innerHTML = '<p class="text-gray-600 text-center py-4">恭喜！没有错题</p>';
+        selectAllWrongCheckbox.checked = false;
+        selectAllWrongCheckbox.disabled = true;
+      } else {
+        selectAllWrongCheckbox.disabled = false;
+        selectAllWrongCheckbox.checked = false;
+        
+        wrongAnswers.forEach((item) => {
+          const wrongItem = document.createElement('div');
+          wrongItem.className = 'border-b border-gray-100 pb-3 mb-3 last:border-0 last:pb-0 last:mb-0';
+          wrongItem.innerHTML = `
+            <div class="flex flex-col sm:flex-row sm:justify-between gap-2">
+              <div class="flex items-start">
+                <input type="checkbox" class="wrong-item-checkbox mt-1 mr-3 form-checkbox text-primary" data-id="${item.id}">
+                <div>
+                  <p class="font-medium">${item.chinese} [${item.partOfSpeech}]</p>
+                  <p class="text-gray-600 text-sm">你的答案: <span class="text-danger">${item.userAnswer}</span></p>
+                </div>
+              </div>
+              <div class="text-right">
+                <p class="text-gray-800">正确答案: ${item.japanese}</p>
+                <p class="text-gray-600 text-sm">假名: ${item.kana}</p>
+              </div>
+            </div>
+          `;
+          wrongAnswersListEl.appendChild(wrongItem);
+        });
+        
+        // 为每个复选框添加事件监听
+        document.querySelectorAll('.wrong-item-checkbox').forEach(checkbox => {
+          checkbox.addEventListener('change', updateSelectAllStatus);
+        });
+      }
+    }
+
+    // 中途结束测验
+    function quitQuiz() {
+      if (confirm('确定要结束测验吗？剩余问题将按未作答处理。')) {
+        // 处理剩余未答的问题
+        const remainingQuestions = shuffledVocabulary.slice(currentQuestionIndex);
+        
+        remainingQuestions.forEach(vocab => {
+          wrongAnswers.push({
+            ...vocab,
+            userAnswer: '[未作答]',
+            id: Date.now() + Math.floor(Math.random() * 1000)
+          });
+        });
+        
+        // 直接显示结果
+        showResults();
+      }
+    }
+
+    // 播放读音
+    function playPronunciation() {
+      const currentVocab = shuffledVocabulary[currentQuestionIndex];
+      const textToSpeak = currentVocab.kana;
+      
+      if ('speechSynthesis' in window) {
+        window.speechSynthesis.cancel();
+        
+        const utterance = new SpeechSynthesisUtterance(textToSpeak);
+        utterance.lang = 'ja-JP';
+        utterance.rate = 0.9;
+        window.speechSynthesis.speak(utterance);
+      } else {
+        alert('您的浏览器不支持语音合成功能');
+      }
+    }
+
+    // 播放正确/错误提示音
+    function playSound(type) {
+      if (!audioContext) {
+        audioContext = new (window.AudioContext || window.webkitAudioContext)();
+      }
+      
+      const oscillator = audioContext.createOscillator();
+      const gainNode = audioContext.createGain();
+      
+      oscillator.connect(gainNode);
+      gainNode.connect(audioContext.destination);
+      
+      if (type === 'correct') {
+        // 正确提示音
+        oscillator.type = 'sine';
+        oscillator.frequency.setValueAtTime(660, audioContext.currentTime); // E5
+        oscillator.frequency.linearRampToValueAtTime(880, audioContext.currentTime + 0.2); // A5
+        gainNode.gain.setValueAtTime(0.2, audioContext.currentTime);
+        gainNode.gain.linearRampToValueAtTime(0, audioContext.currentTime + 0.2);
+        oscillator.start();
+        oscillator.stop(audioContext.currentTime + 0.2);
+      } else {
+        // 错误提示音
+        oscillator.type = 'sine';
+        oscillator.frequency.setValueAtTime(880, audioContext.currentTime); // A5
+        oscillator.frequency.linearRampToValueAtTime(550, audioContext.currentTime + 0.3); // C5
+        gainNode.gain.setValueAtTime(0.2, audioContext.currentTime);
+        gainNode.gain.linearRampToValueAtTime(0, audioContext.currentTime + 0.3);
+        oscillator.start();
+        oscillator.stop(audioContext.currentTime + 0.3);
+      }
+    }
+
+    // 下载选中的错题
+    function downloadWrongAnswers() {
+      const checkedBoxes = document.querySelectorAll('.wrong-item-checkbox:checked');
+      
+      if (checkedBoxes.length === 0) {
+        alert('请先勾选需要下载的错题');
+        return;
+      }
+      
+      // 收集选中的错题ID
+      const selectedIds = Array.from(checkedBoxes).map(checkbox => 
+        parseInt(checkbox.getAttribute('data-id'))
+      );
+      
+      // 筛选出选中的错题
+      const selectedWrongAnswers = wrongAnswers.filter(item => 
+        selectedIds.includes(item.id)
+      );
+      
+      // 准备CSV内容
+      let csvContent = "中文,假名,日语,词性\n";
+      
+      selectedWrongAnswers.forEach(item => {
+        const row = [
+          escapeCsv(item.chinese),
+          escapeCsv(item.kana),
+          escapeCsv(item.japanese),
+          escapeCsv(item.partOfSpeech)
+        ];
+        csvContent += row.join(',') + "\n";
+      });
+      
+      // 确定下载文件名
+      let fileName;
+      if (currentQuizName) {
+        fileName = `${currentQuizName}错题本_${new Date().toLocaleDateString()}.csv`;
+      } else {
+        fileName = `单词错题本_${new Date().toLocaleDateString()}.csv`;
+      }
+      
+      // 创建下载链接
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.setAttribute('href', url);
+      link.setAttribute('download', fileName);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+
+    // 全选/取消全选
+    function toggleSelectAll() {
+      const isChecked = selectAllWrongCheckbox.checked;
+      document.querySelectorAll('.wrong-item-checkbox').forEach(checkbox => {
+        checkbox.checked = isChecked;
+      });
+    }
+
+    // 更新全选框状态
+    function updateSelectAllStatus() {
+      const allCheckboxes = document.querySelectorAll('.wrong-item-checkbox');
+      const checkedBoxes = document.querySelectorAll('.wrong-item-checkbox:checked');
+      selectAllWrongCheckbox.checked = allCheckboxes.length === checkedBoxes.length;
+    }
+
+    // 重新开始测验
+    function restartQuiz() {
+      if (currentTextbook) {
+        // 如果是系统单词库模式，返回课程选择页面
+        resultsSection.classList.add('hidden');
+        systemLibrarySection.classList.remove('hidden');
+      } else {
+        // 如果是自定义文件模式，返回上传页面
+        resultsSection.classList.add('hidden');
+        uploadSection.classList.remove('hidden');
+      }
+    }
+
+    // 工具函数：打乱数组顺序
+    function shuffleArray(array) {
+      for (let i = array.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [array[i], array[j]] = [array[j], array[i]];
+      }
+    }
+
+    // 工具函数：处理CSV中的特殊字符
+    function escapeCsv(value) {
+      if (value.includes(',') || value.includes('"') || value.includes('\n')) {
+        return `"${value.replace(/"/g, '""')}"`;
+      }
+      return value;
+    }
+
+    // 初始化应用
+    function initApp() {
+      initEventListeners();
+    }
+
+    // 页面加载完成后初始化应用
+    document.addEventListener('DOMContentLoaded', initApp);
+  </script>
+</body>
+
+</html>
+    
